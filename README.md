@@ -134,9 +134,13 @@ Minimal live setup with Telegram alerts only on matches:
 ```bash
 python log_analyser.py /var/log/app.log "ERROR|Exception" 123456789 -i 1
 ```
+---
 
+## TODO:
 
-
+- standardize the operation of all modules
+- create a health_checker config generator for a fastapi project
+- arrange all modules into a library and post them on pypi
 
 ---
 
@@ -268,5 +272,13 @@ python tg_alarm.py 123456789 "Проблема с сервисом X: timeout"
 ```bash
 python log_analyser.py /var/log/app.log "ERROR|Exception" 123456789 -i 1
 ```
+
+---
+
+## TODO:
+
+- стандартизировать работу всех модулей
+- сделать генератор конфига  health_checker для проекта на fastapi
+- оформить все модули в библиотеку и выложить на pypi
 
 
