@@ -3,13 +3,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Панельный просмотр дубликатов строк в логах (2 панели в ряд) + горячая клавиша 'q' для выхода.
+Panel viewing of duplicate lines in logs (2 panels in a row) + hotkey 'q' to exit.
 
-Примеры запуска:
-  # разовый отчёт по двум логам, топ-15 строк
+Launch examples:
+  # one-time report on two logs, top 15 lines
   python logs_panels.py app.log nginx.error.log -n 15
 
-  # режим слежения раз в 0.5 сек, без учёта регистра, полноэкран
+  # tracking mode once every 0.5 sec, case insensitive, full screen
   python logs_panels.py app.log nginx.error.log other.log --watch --refresh 0.5 --ignore-case --fullscreen
 """
 
@@ -29,17 +29,14 @@ from rich.console import Console
 console = Console()
 
 
-# ============================
-# Клавиши: кросс-платформенно
-# ============================
 if os.name == "nt":
     import msvcrt
 
     def poll_key() -> str | None:
-        """Вернёт символ, если нажата клавиша; иначе None (Windows)."""
+        
         if msvcrt.kbhit():
             ch = msvcrt.getwch()  # unicode
-            # Проглотим код расширенной клавиши (стрелки и т.п.)
+            
             if ch in ("\x00", "\xe0") and msvcrt.kbhit():
                 _ = msvcrt.getwch()
                 return None
@@ -47,7 +44,7 @@ if os.name == "nt":
         return None
 
     class raw_mode:
-        """Заглушка для Windows (режим терминала не требуется)."""
+        
         def __init__(self, *_): pass
         def __enter__(self): return self
         def __exit__(self, *exc): return False
@@ -59,7 +56,7 @@ else:
     import select
 
     def poll_key() -> str | None:
-        """Вернёт символ, если нажата клавиша; иначе None (POSIX)."""
+        """return symbol, if key pressed; else None (POSIX)."""
         r, _, _ = select.select([sys.stdin], [], [], 0)
         if r:
             try:
@@ -70,7 +67,7 @@ else:
         return None
 
     class raw_mode:
-        """Переводит TTY в 'cbreak' на время работы цикла."""
+        """TTY in 'cbreak'"""
         def __init__(self, stream):
             self.stream = stream
             self.fd = stream.fileno()
@@ -88,12 +85,9 @@ else:
             return False
 
 
-# ============================
-# Подсчёт повторяющихся строк
-# ============================
 def log_parse(path: str, *, strip=True, ignore_case=False) -> Counter:
     """
-    Читает файл построчно и возвращает Counter по строкам.
+    read file and return Counter for line.
     """
     cnt = Counter()
     p = Path(path)
@@ -113,24 +107,16 @@ def log_parse(path: str, *, strip=True, ignore_case=False) -> Counter:
 
 
 def build_report(paths: List[str], *, strip=True, ignore_case=False) -> Dict[str, Counter]:
-    """
-    Собирает отчёт: {путь: Counter(...)} для всех файлов.
-    """
     return {path: log_parse(path, strip=strip, ignore_case=ignore_case) for path in paths}
 
 
-# ============================
-# Рендеринг Rich Layout
-# ============================
+
 def make_panel(path: str, counter: Counter, top: int = 10) -> Panel:
-    """
-    Создаёт панель с топ-N строками и их количеством.
-    """
     p = Path(path)
     title = f"[bold]{p.name}[/] — {p}"
 
     if not counter:
-        body = "[dim]нет записей или файл не найден[/dim]"
+        body = "[dim]file not found or empty[/dim]"
     else:
         lines = [f"[bold]{n}×[/]  {msg}" for msg, n in counter.most_common(top)]
         body = "\n".join(lines)
@@ -144,24 +130,17 @@ def make_panel(path: str, counter: Counter, top: int = 10) -> Panel:
 
 
 def chunk_pairs(items: List[Tuple[str, Counter]]) -> List[List[Tuple[str, Counter]]]:
-    """
-    Разбивает список на куски по 2 элемента: [[a,b], [c,d], [e]]
-    """
     return [items[i:i + 2] for i in range(0, len(items), 2)]
 
 
 def build_layout(report: Dict[str, Counter], *, top: int = 10, show_help: bool = True) -> Layout:
-    """
-    Строит Layout, где каждая строка содержит до двух панелей.
-    Нижняя строка — статус/подсказки.
-    """
     root = Layout(name="root")
     body = Layout(name="body", ratio=1)
     footer = Layout(name="footer", size=3)
 
     items = list(report.items())
     if not items:
-        body.update(Panel("[dim]Нет входных файлов[/dim]", title="Логи"))
+        body.update(Panel("[dim]logs not found[/dim]", title="Логи"))
     else:
         rows: List[Layout] = []
         pairs = chunk_pairs(items)
@@ -184,8 +163,8 @@ def build_layout(report: Dict[str, Counter], *, top: int = 10, show_help: bool =
     if show_help:
         footer.update(
             Panel(
-                "[bold]Горячие клавиши:[/bold]  [yellow bold]Q[/yellow bold] — выход   •   [yellow bold]Ctrl+C[/yellow bold] — аварийный выход\n"
-                "[dim]Подсказка:[/dim] используйте --watch для автообновления, --refresh для интервала.",
+                "[bold]Hotkeys:[/bold]  [yellow bold]Q[/yellow bold] — exit   •   [yellow bold]Ctrl+C[/yellow bold] — emergency exit\n"
+                "[dim]Hint:[/dim] use --watch for autorefresh, --refresh for set interval.",
                 border_style="magenta",
                 padding=(0, 2),
             )
@@ -197,13 +176,11 @@ def build_layout(report: Dict[str, Counter], *, top: int = 10, show_help: bool =
     return root
 
 
-# ============================
-# Основная логика (CLI)
-# ============================
+
 def run_once(paths: List[str], *, top: int, strip: bool, ignore_case: bool) -> None:
     report = build_report(paths, strip=strip, ignore_case=ignore_case)
     layout = build_layout(report, top=top)
-    # Отрисуем один кадр и выйдем
+    
     with Live(layout, refresh_per_second=8, screen=False):
         time.sleep(0.05)
 
@@ -217,71 +194,66 @@ def run_watch(
     refresh_sec: float,
     fullscreen: bool,
 ) -> None:
-    """
-    Периодически перечитывает файлы и обновляет лэйаут. Выход по клавише 'q'.
-    """
     def render():
         rep = build_report(paths, strip=strip, ignore_case=ignore_case)
         return build_layout(rep, top=top, show_help=True)
 
-    # Live рисует интерфейс; raw_mode включает моментальное чтение клавиш (на Unix)
+
     with Live(render(), refresh_per_second=max(2, int(1 / max(0.05, min(refresh_sec, 1.0)))), screen=fullscreen) as live, \
          raw_mode(sys.stdin):
         try:
             while True:
-                # Обработка горячих клавиш
                 key = poll_key()
                 if key in ("q", "Q"):
                     break
 
-                # Периодическое обновление
                 time.sleep(refresh_sec)
                 live.update(render())
         except KeyboardInterrupt:
-            # Корректно выходим при Ctrl+C
+            
             pass
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Панельный просмотр дубликатов строк в логах (2 панели в ряд) + выход по 'q'."
+        description="Two-pane viewer of duplicate lines in logs (2 panels side by side). Press 'q' to quit."
     )
     parser.add_argument(
         "files",
         nargs="+",
-        help="Пути к лог-файлам."
+        help="Paths to log files."
     )
     parser.add_argument(
         "--top", "-n",
         type=int,
         default=10,
-        help="Сколько верхних записей показывать для каждого файла (по умолчанию 10)."
+        help="How many top entries to show per file (default: 10)."
     )
     parser.add_argument(
         "--ignore-case", "-i",
         action="store_true",
-        help="Считать строки без учёта регистра."
+        help="Count lines case-insensitively."
     )
     parser.add_argument(
         "--no-strip",
         action="store_true",
-        help="Не обрезать пробелы по краям строк."
+        help="Do not trim leading/trailing spaces."
     )
     parser.add_argument(
         "--watch", "-w",
         action="store_true",
-        help="Режим слежения: периодически перечитывать файлы и обновлять экран."
+        help="Watch mode: periodically re-read files and refresh the screen."
     )
     parser.add_argument(
         "--refresh",
         type=float,
         default=1.0,
-        help="Интервал обновления в секундах в режиме --watch (по умолчанию 1.0)."
+        help="Refresh interval in seconds in --watch mode (default: 1.0)."
     )
     parser.add_argument(
         "--fullscreen", "-f",
         action="store_true",
-        help="Включить полноэкранный режим в --watch."
+        help="Enable full-screen mode in --watch."
     )
     return parser.parse_args()
 
