@@ -58,6 +58,14 @@ Flags:
 - On exceptions during request, a message `"[ERR] service not responding"` is sent to `tg_id` via Telegram.
 - TUI shows per-endpoint status and a sparkline with min/avg/max.
 
+**TODO**
+- full support database requests
+- separate intervals for endpoints
+- make a health_checker config generator for a fastapi projects
+
+**Demo in watch state**
+![python heath_checher.py -c hc.yaml -w](assets/health_checker.png)
+
 ---
 
 ### 2) log_analyser (`log_analyser.py`)
@@ -107,6 +115,13 @@ Flags and args (exact):
 - `--refresh <FLOAT>` — refresh interval seconds (**default: 1.0**)
 - `--fullscreen, -f` — full-screen UI
 
+**TODO:**
+- add time viewing
+- pipeline implementation
+
+**Demo in watch state**
+![python heath_checher.py -c hc.yaml -w](assets/error_demux.png)
+
 ---
 
 ### 4) tg_alarm (`tg_alarm.py`)
@@ -120,7 +135,7 @@ python tg_alarm.py <chat_id> "<message>"
 python tg_alarm.py 123456789 "Service X failed: timeout"
 ```
 
-**Security note:** the bot token is currently hardcoded in the script. Consider switching to an environment variable (e.g., `TG_BOT_TOKEN`) and reading it with `os.environ.get(...)` before production use.
+
 
 ---
 
@@ -197,6 +212,15 @@ python heath_checher.py -c hc.yaml -w
 - `-i <INT>` — интервал проверок в секундах (**по умолчанию: 10**)
 - `-w` — режим наблюдения (TUI)
 
+**TODO**
+- полная совместимость с запросами к базам данных
+- раздельные интервалы для эндпоинтов
+- сделать генератор конфига  health_checker для проектов на fastapi
+
+**Демо в состоянии просмотра**
+
+![python heath_checher.py -c hc.yaml -w](assets/health_checker.png)
+
 ---
 
 ### 2) log_analyser (`log_analyser.py`)
@@ -245,6 +269,13 @@ python error_demux.py app.log other.log --watch --refresh 0.5 --fullscreen
 - `--refresh <FLOAT>` — интервал обновления в секундах (**по умолчанию: 1.0**)
 - `--fullscreen, -f` — полноэкранный режим
 
+**TODO:**
+- показ времени
+- реализация конвеера
+
+**Demo in watch state**
+![python heath_checher.py -c hc.yaml -w](assets/error_demux.png)
+
 ---
 
 ### 4) tg_alarm (`tg_alarm.py`)
@@ -257,8 +288,6 @@ python tg_alarm.py <chat_id> "<message>"
 # пример
 python tg_alarm.py 123456789 "Проблема с сервисом X: timeout"
 ```
-
-**Безопасность:** токен бота сейчас зашит в коде. Для продакшена лучше вынести в переменную окружения (например, `TG_BOT_TOKEN`) и читать её через `os.environ.get(...)`.
 
 ---
 
@@ -278,7 +307,6 @@ python log_analyser.py /var/log/app.log "ERROR|Exception" 123456789 -i 1
 ## TODO:
 
 - стандартизировать работу всех модулей
-- сделать генератор конфига  health_checker для проекта на fastapi
 - оформить все модули в библиотеку и выложить на pypi
 
 
