@@ -1,9 +1,14 @@
 #!/bin/python
+import os
 import requests
 import argparse
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 def send_alarm(chat_id, message):
-    bot_token = '7739874446:AAHGnfK5PRloYMIdPPTx6FP1FkoJA61MozM'
+    bot_token = os.getenv("TG_BOT_TOKEN")
     send_message_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
 	    
     payload = {

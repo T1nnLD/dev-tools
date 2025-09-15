@@ -1,5 +1,5 @@
 #EXAMPLE!!!, THE CONFIG NAME CAN BE ANYTHING
-tg_id: 1698924964
+tg_id: <your tg_id>
 points:
     -   url: "http://localhost:5000/"
         method: OPTIONS

@@ -1,4 +1,5 @@
 **/dev-utils_venv
 **/TODO
 **/__pycache__
-for_tests/*.txt
+for_tests/*
+**/.env
