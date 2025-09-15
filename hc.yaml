@@ -1,0 +1,9 @@
+#EXAMPLE!!!, THE CONFIG NAME CAN BE ANYTHING
+tg_id: 1698924964
+points:
+    -   url: "http://localhost:5000/"
+        method: OPTIONS
+    
+    -   url: "http://localhost:2000/"
+        method: GET
+        data: null
