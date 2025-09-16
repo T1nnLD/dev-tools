@@ -134,7 +134,76 @@ python tg_alarm.py <chat_id> "<message>"
 # example
 python tg_alarm.py 123456789 "Service X failed: timeout"
 ```
+---
+### 5) secret_scanner (`secret_scanner.py`)
 
+Scan your repo or changed files for hard‑coded secrets. Uses provider‑specific regexes + entropy and supports a baseline to suppress known findings.
+
+**Why:** catch keys/tokens before they land in main or in build artifacts.
+
+**Key features:**
+- Regex + entropy detection (AWS, GitHub, Slack, GCP, Stripe, private keys, generics).
+- Works on folders/files, git‑tracked or only git‑diff via `--since`.
+- Inline ignore per line: add `# secret-scan: ignore`.
+- Baseline file to suppress known findings.
+- JSON output for CI; exits with **code 1** if new findings are present.
+
+**CLI (exact flags):**
+```bash
+# scan whole repo (text files only)
+python secret_scanner.py
+
+# scan only files changed since a ref/branch
+python secret_scanner.py --since origin/main
+
+# machine-readable output (for CI)
+python secret_scanner.py --since origin/main --json
+
+# update/create baseline (treat current findings as known)
+python secret_scanner.py --update-baseline
+```
+
+**Options:**
+- `paths...` — files or directories to scan (default: `.`)
+- `--since <GIT_REF>` — only diff against `GIT_REF..HEAD`
+- `--git-tracked` — scan only files tracked by git
+- `--baseline <PATH>` — path to baseline file (**default: `.secret-scanner-baseline.json`**)
+- `--update-baseline` — write current findings into the baseline and exit 0
+- `--json` — JSON output
+- `--no-entropy` — turn off entropy heuristics
+- `--ignore <GLOB>` — add ignore pattern (can be repeated)
+
+
+
+**Pre-commit (local):**
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: secret-scanner
+        name: secret-scanner
+        entry: python3 secret_scanner.py --since HEAD
+        language: system
+        pass_filenames: false
+```
+
+**GitHub Actions (CI):**
+```yaml
+# .github/workflows/secret-scan.yml
+name: secret-scan
+on: [pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 secret_scanner.py --since origin/${{ github.base_ref }} --json
+```
+
+**Exit codes:**
+- `0` — no new findings (or `--update-baseline` was used)
+- `1` — new potential secrets detected
 
 
 ---
@@ -149,12 +218,13 @@ Minimal live setup with Telegram alerts only on matches:
 ```bash
 python log_analyser.py /var/log/app.log "ERROR|Exception" 123456789 -i 1
 ```
+
+
 ---
 
 ## TODO:
 
 - standardize the operation of all modules
-- create a health_checker config generator for a fastapi project
 - arrange all modules into a library and post them on pypi
 
 ---
@@ -185,6 +255,11 @@ pip install -r requirments.txt
 ---
 
 ## Инструменты
+
+
+
+
+
 
 ### 1) health_checker (`heath_checher.py`)
 
@@ -288,6 +363,74 @@ python tg_alarm.py <chat_id> "<message>"
 # пример
 python tg_alarm.py 123456789 "Проблема с сервисом X: timeout"
 ```
+---
+### 5) secret_scanner (`secret_scanner.py`)
+
+Сканирует репозиторий или изменённые файлы на «захардкоженные» секреты. Использует набор регэкспов по провайдерам + энтропию и поддерживает baseline для подавления известных находок.
+
+**Зачем:** поймать ключи/токены до попадания в `main` или артефакты сборки.
+
+**Возможности:**
+- Регэкспы + энтропия (AWS, GitHub, Slack, GCP, Stripe, приватные ключи, общие шаблоны).
+- Работа по папкам/файлам, только по git‑tracked или только по `git diff` через `--since`.
+- Точечный игнор строки: комментарий `# secret-scan: ignore`.
+- Baseline‑файл для подавления «известных» находок.
+- JSON для CI; завершение **кодом 1**, если есть новые находки.
+
+**Запуск (точные флаги):**
+```bash
+# скан всего репо (только текстовые файлы)
+python secret_scanner.py
+
+# скан только изменённых файлов с ветки/тэга
+python secret_scanner.py --since origin/main
+
+# JSON для CI
+python secret_scanner.py --since origin/main --json
+
+# обновить/создать baseline
+python secret_scanner.py --update-baseline
+```
+
+**Опции:**
+- `paths...` — файлы или директории для сканирования (по умолчанию: `.`)
+- `--since <GIT_REF>` — только изменения относительно `GIT_REF..HEAD`
+- `--git-tracked` — сканировать только файлы, отслеживаемые git
+- `--baseline <PATH>` — путь к baseline (**по умолчанию: `.secret-scanner-baseline.json`**)
+- `--update-baseline` — записать текущие находки в baseline и выйти с кодом 0
+- `--json` — вывести JSON
+- `--no-entropy` — отключить энтропийные эвристики
+- `--ignore <GLOB>` — добавить шаблон игнора (флаг можно повторять)
+
+**pre-commit (локально):**
+```yaml
+repos:
+  - repo: local
+    hooks:
+      - id: secret-scanner
+        name: secret-scanner
+        entry: python3 secret_scanner.py --since HEAD
+        language: system
+        pass_filenames: false
+```
+
+**GitHub Actions (CI):**
+```yaml
+name: secret-scan
+on: [pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 secret_scanner.py --since origin/${{ github.base_ref }} --json
+```
+
+**Коды выхода:**
+- `0` — нет новых находок (или был использован `--update-baseline`)
+- `1` — обнаружены новые потенциальные секреты
+
+
 
 ---
 
@@ -308,5 +451,8 @@ python log_analyser.py /var/log/app.log "ERROR|Exception" 123456789 -i 1
 
 - стандартизировать работу всех модулей
 - оформить все модули в библиотеку и выложить на pypi
+
+
+
 
 
