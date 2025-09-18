@@ -8,7 +8,7 @@ from asyncio import iscoroutinefunction
 
 import asyncio
 
-def timer_ms(label: None | str = None, fmt: str = "[bold yellow]{label}[/] worked in [yellow bold]{time:.2f}[/]"):
+def timer_ms(label: None | str = None, fmt: str = "[bold yellow]{label}[/] worked in [yellow bold]{time:.2f}[/]ms"):
     def dec(f):
         if iscoroutinefunction(f):
             @wraps(f)
@@ -38,13 +38,14 @@ def timer_ms(label: None | str = None, fmt: str = "[bold yellow]{label}[/] worke
             return wrapper
     return dec
 
-
-@timer_ms("test_timer")
-def test_func(time=1):
-    sleep(time)
-
-@timer_ms()
-async def test_async_func(time=1):
-    sleep(time)
-test_func()
-asyncio.run(test_async_func())
+if __name__ == "__main__"
+    #EXAMPLE FOR USE
+    @timer_ms("test_timer")
+    def test_func(time=1):
+        sleep(time)
+    
+    @timer_ms(fmt="func with name {label} worked in [yellow bold]{time:.2f}ms[/]")
+    async def test_async_func(time=1):
+        sleep(time)
+    test_func()
+    asyncio.run(test_async_func())
