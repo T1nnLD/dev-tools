@@ -7,6 +7,7 @@ Currently implemented:
 - **log_analyser** — streaming grep-like log watcher with Telegram alerts
 - **error_demux** — Rich TUI for duplicate-lines report across logs
 - **tg_alarm** — minimal Telegram sender
+- **secret_scaner** — file scanner to find hardcoded api keys
 
 ---
 
@@ -238,6 +239,7 @@ python log_analyser.py /var/log/app.log "ERROR|Exception" 123456789 -i 1
 - **log_analyser** — «греп» по логам с отправкой в Telegram
 - **error_demux** — Rich TUI с топом дубликатов строк по файлам
 - **tg_alarm** — минимальная отправка сообщений в Telegram
+- **secret_scanner** — Сканер файлов для поиска жестко запрограммированных API ключей
 
 ---
 
