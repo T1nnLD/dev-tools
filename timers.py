@@ -38,7 +38,7 @@ def timer_ms(label: None | str = None, fmt: str = "[bold yellow]{label}[/] worke
             return wrapper
     return dec
 
-if __name__ == "__main__"
+if __name__ == "__main__":
     #EXAMPLE FOR USE
     @timer_ms("test_timer")
     def test_func(time=1):
