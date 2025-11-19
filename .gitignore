@@ -4,3 +4,43 @@
 for_tests/*
 **/.env
 **/src/dev_utils.egg-info/
+
+# виртуалки
+.venv/
+venv/
+dev-utils_venv/
+
+# кэш/байткод
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# артефакты сборки/установки
+build/
+dist/
+*.egg-info/
+src/*.egg-info/
+*.egg
+*.whl
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# лог/временные
+*.log
+
+# uv
+.uv_cache/
+
