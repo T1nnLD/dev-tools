@@ -319,7 +319,7 @@ def parse_args() -> argparse.Namespace:
     return ap.parse_args()
 
 
-def main() -> int:
+def main_process() -> int:
     args = parse_args()
     root = Path(".").resolve()
 
@@ -367,7 +367,9 @@ def main() -> int:
 
     return 1 if new_findings else 0
 
+def main():
+    sys.exit(main_process())
+
 
 if __name__ == "__main__":
-    sys.exit(main())
-
+    main()

@@ -4,9 +4,19 @@ import argparse
 import subprocess as sp
 
 from time import sleep
-from tg_alarm import send_alarm 
+from .tg_alarm import send_alarm
 
-def analyze(path, mode, tgid, interval):
+from os import PathLike
+
+def analyze(path: PathLike | str, mode: str, tgid: int, interval: float = 1) -> None:
+    """
+    analysis of log files and notification of errors in telegram
+    :param path: Path to log file
+    :param mode: mode for working, e.g, \"<some text 1>|<some text 2>\" - this mode finding strokes equas \"some text 1\" and \"some text 2\" and notification, '|' the seporator"
+    :param tgid: your telegram id for sending notifications about errors
+    :param interval: interval for scanning, default 1s
+    :return: None
+    """
     while True:
         sp.run(
             f'''tail -F {os.path.normpath(path)} | while IFS= read -r line; do
@@ -17,7 +27,7 @@ def analyze(path, mode, tgid, interval):
             shell=True
         )
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("file", type=str, help="path to log file for analyze and notification of warnings and/or errors")
     parser.add_argument("mode", type=str, help="mode for working, e.g, \"<some text 1>|<some text 2>\" - this mode finding strokes equas \"some text 1\" and \"some text 2\" and notification, '|' the seporator")
@@ -28,4 +38,7 @@ if __name__ == "__main__":
 
     analyze(args.file, args.mode, args.tgid, args.i)
 
+
+if __name__ == "__main__":
+    main()
 

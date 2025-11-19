@@ -3,3 +3,4 @@
 **/__pycache__
 for_tests/*
 **/.env
+**/src/dev_utils.egg-info/

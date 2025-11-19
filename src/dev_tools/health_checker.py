@@ -18,7 +18,7 @@ from rich.text import Text
 from rich.layout import Layout
 from rich.rule import Rule
 
-from tg_alarm import send_alarm
+from .tg_alarm import send_alarm
 
 
 HISTORY_LEN = 120
@@ -216,8 +216,7 @@ def health_checker(conf_path: str, interval: int = 10, watch: bool = False, with
                 live.update(render())
                 sleep(interval)
 
-
-if __name__ == "__main__":
+def main():
     try:
         parser = argparse.ArgumentParser()
 
@@ -232,3 +231,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         exit(0)
 
+
+
+if __name__ == "__main__":
+    main()

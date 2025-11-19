@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dev-utils"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "annotated-types==0.7.0",
+    "certifi==2025.8.3",
+    "charset-normalizer==3.4.3",
+    "idna==3.10",
+    "markdown-it-py==4.0.0",
+    "mdurl==0.1.2",
+    "pydantic==2.11.7",
+    "pydantic-core==2.33.2",
+    "pygments==2.19.2",
+    "python-dotenv==1.1.1",
+    "pyyaml==6.0.2",
+    "requests==2.32.5",
+    "rich==14.1.0",
+    "typing-extensions==4.15.0",
+    "typing-inspection==0.4.1",
+    "urllib3==2.5.0",
+]
+
+[project.scripts]
+error-demux = "dev_tools.error_demux:main"
+health-checker = "dev_tools.health_checker:main"  # сделай аналогичный main() в secret_scanner.py
+log-analyser = "dev_tools.log_analyser:main"
+secret-scanner = "dev_tools.secret_scanner:main"
+tg-alarm = "dev_tools.tg_alarm:main"
+[tool.hatch.build.targets.wheel]
+packages = ["src/dev_tools"]
