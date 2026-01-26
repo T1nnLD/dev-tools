@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dev-utils"
-version = "0.1.0"
+version = "1.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "annotated-types==0.7.0",
     "certifi==2025.8.3",
@@ -33,5 +33,18 @@ health-checker = "dev_tools.health_checker:main"  # сделай аналоги�
 log-analyser = "dev_tools.log_analyser:main"
 secret-scanner = "dev_tools.secret_scanner:main"
 tg-alarm = "dev_tools.tg_alarm:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/dev_tools"]
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
+[dependency-groups]
+dev = [
+    "fastapi>=0.122.0",
+]
+

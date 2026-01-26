@@ -1,4 +1,4 @@
-from fastapi import Request
+#from fastapi import Request
 import logging
 
 logger = logging.getLogger("uvicorn.access")
@@ -8,7 +8,7 @@ def no_logging(func):
     print(dir(func))
     return func
 
-async def logging_filter(request: Request, call_next):
+async def logging_filter(request, call_next):
     endpoint = request.scope.get("endpoint")
     print(endpoint)
 
