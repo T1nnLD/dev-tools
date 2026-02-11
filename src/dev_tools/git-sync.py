@@ -1,3 +1,5 @@
+
+
 import yaml
 import argparse
 import subprocess as sp
@@ -11,14 +13,7 @@ from typing import List, Optional
 class Config(BaseModel):
     branch: str
     interval: float = 1
-    strategy: str
     ignore: Optional[List[str]] = None  # Список путей/паттернов для игнора
-
-    @field_validator("strategy")
-    def check_strategy(cls, v: str) -> str:
-        if v != "sync" and v != "manual":
-            raise ValueError('strategy can only be "sync" or "manual"!')
-        return v.title()
 
     @field_validator("interval")
     def check_interval(cls, v: float) -> float:
@@ -79,43 +74,48 @@ def has_differences_with_remote(branch: str, ignore_list: Optional[List[str]] = 
             console.print("    Detected unstaged changes in working dir differing from remote", style="yellow")
             differences_found = True
 
-    if differences_found:
-        console.print("    найдены расхождения", style="yellow")  # Твой пример
-
     return differences_found
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", type=str, default="./git-sync.conf.yaml", help="path to config")
-    parser.add_argument("--generate-config", action="store_true", help="generate baseline config")
-    args = parser.parse_args()
+    try:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-c", type=str, default="./git-sync.conf.yaml", help="path to config")
+        parser.add_argument("--generate-config", action="store_true", help="generate baseline config")
+        args = parser.parse_args()
 
-    if args.generate_config:
-        result = sp.run(["git", "branch", "--show-current"], capture_output=True, text=True)
-        current_branch = result.stdout.strip() or "main"
-        with open("./git-sync.conf.yaml", "w") as file:
-            config = {"config": {"branch": current_branch, "interval": 1, "strategy": "sync"}}
-            yaml.dump(config, file, indent=2)
-            log(f"Configuration file generated with branch: {current_branch}")
-        exit(0)
+        if args.generate_config:
+            result = sp.run(["git", "branch", "--show-current"], capture_output=True, text=True)
+            current_branch = result.stdout.strip() or "main"
+            with open("./git-sync.conf.yaml", "w") as file:
+                config = {"config": 
+                            {"branch": current_branch, 
+                            "interval": 1, 
+                            "ignore":[
+                                'git-sync.conf.yaml'
+                              ]
+                            }
+                        }
+                
+                yaml.dump(config, file, indent=2)
+                log(f"Configuration file generated with branch: {current_branch}")
+            exit(0)
 
-    with open(args.c, "r") as file:
-        config = Config(**yaml.safe_load(file)["config"])
+        with open(args.c, "r") as file:
+            config = Config(**yaml.safe_load(file)["config"])
 
-    log(f"{config}")
+        log(f"{config}")
 
-    # Применяем skip-worktree один раз при старте, если ignore есть
-    if config.ignore:
-        apply_skip_worktree(config.ignore)
+        # Применяем skip-worktree один раз при старте, если ignore есть
+        if config.ignore:
+            apply_skip_worktree(config.ignore)
 
-    console = Console()  # Глобальный console для очистки
+        console = Console()  # Глобальный console для очистки
 
-    while True:
-        console.clear()  # Стираем предыдущие выводы перед новой проверкой
-        if has_differences_with_remote(config.branch, config.ignore):
-            if config.strategy.lower() == "sync":
-                console.print("    Syncing ...", style="bold green")
-                with console.status("       [bold green]Performing reset...", spinner="dots"):
+        while True:
+            console.clear()  # Стираем предыдущие выводы перед новой проверкой
+            if has_differences_with_remote(config.branch, config.ignore):
+                console.print("\n    [bold yellow]Syncing ...[/]")
+                with console.status("       [bold yellow]Performing reset...", spinner="dots",):
                     # Fetch уже сделан, но на всякий
                     sp.run(["git", "fetch"])
                     reset_result = sp.run(
@@ -123,28 +123,14 @@ def main():
                         capture_output=True, check=False
                     )
                     if reset_result.returncode != 0:
-                        console.print(f"       [ERR] Reset failed: {reset_result.stderr.decode().strip()}", style="red")
+                        console.print(f"       [bold red][ERR] Reset failed[/]: {reset_result.stderr.decode().strip()}")
                     else:
-                        console.print("       done", style="green")
-            
-            elif config.strategy.lower() == "manual":
-                selected = False
-                while not selected:
-                    solution = input(
-                        "    Detected differences with remote (excluding ignored paths). Reset local to match remote? [Y/n]"
-                    )
-                    if solution.lower() in ("", "y"):
-                        console.print("    Resetting ...", style="bold green")
-                        with console.status("       [bold green]Performing reset...", spinner="dots"):
-                            sp.run(["git", "fetch"])
-                            sp.run(["git", "reset", "--hard", f"origin/{config.branch}"])
-                        console.print("       done", style="green")
-                        selected = True
-                    elif solution.lower() == "n":
-                        console.print("    No changes made", style="yellow")
-                        selected = True
+                        console.print("       done", style="bold green")
 
-        sleep(config.interval)
+            sleep(config.interval)
+    except KeyboardInterrupt:
+        log('exiting...')
+        exit(0)
 
 if __name__ == "__main__":
     main()
