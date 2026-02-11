@@ -33,6 +33,7 @@ health-checker = "dev_tools.health_checker:main"  # сделай аналоги�
 log-analyser = "dev_tools.log_analyser:main"
 secret-scanner = "dev_tools.secret_scanner:main"
 tg-alarm = "dev_tools.tg_alarm:main"
+git-sync = "dev_toools.git-sync:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dev_tools"]

@@ -1,0 +1,4 @@
+config:
+  branch: main
+  interval: 1
+  strategy: sync

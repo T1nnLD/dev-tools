@@ -5,6 +5,8 @@ for_tests/*
 **/.env
 **/src/dev_utils.egg-info/
 
+git-sync.conf.yaml
+
 # виртуалки
 .venv/
 venv/

@@ -3,7 +3,8 @@ from .log_analyser import analyze
 from .tg_alarm import send_alarm as send_tg_alarm
 from .timers import InterTimer, timer_ms
 from .logging import log
-from .logging import FMT
+from .logging import LOG_FORMAT
+from .logging import set_log_format
 from .no_logging import logging_filter, no_logging
 __all__ = [
     "health_checker",
@@ -12,7 +13,8 @@ __all__ = [
     "InterTimer",
     "timer_ms",
     "log",
-    "FMT",
+    "LOG_FORMAT",
+    "set_log_format",
     "no_logging",
-    "logging_filter"
+    "logging_filter",
 ]
