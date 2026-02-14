@@ -3,7 +3,7 @@ import argparse
 import subprocess as sp
 from pydantic import BaseModel
 from pydantic import field_validator
-from dev_tools.logging import log
+from .logger import log
 from time import sleep
 from rich.console import Console
 from typing import List, Optional

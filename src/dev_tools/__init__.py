@@ -9,7 +9,6 @@ from .timers import InterTimer, timer_ms
 from .logger import *
 from .no_logging import logging_filter, no_logging
 
-logging = logger
 
 __all__ = [
     "health_checker",
