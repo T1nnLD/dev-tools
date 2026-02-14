@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dev-utils"
-version = "1.1.0"
+version = "1.1.2"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,7 +33,7 @@ health-checker = "dev_tools.health_checker:main"  # сделай аналоги�
 log-analyser = "dev_tools.log_analyser:main"
 secret-scanner = "dev_tools.secret_scanner:main"
 tg-alarm = "dev_tools.tg_alarm:main"
-git-sync = "dev_toools.git-sync:main"
+git-sync = "dev_tools.git_sync:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dev_tools"]
