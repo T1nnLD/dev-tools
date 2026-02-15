@@ -1,306 +1,214 @@
+# dev-tools
 
-# dev-tools (RU)
+Небольшой, но полезный набор утилит для повседневной работы разработчика.
 
-Небольшой набор утилит для повседневной разработки.
+[![Python](https://img.shields.io/badge/python-3.10+-blue)](https://www.python.org/)
 
-Реализовано:
-- **health_checker** — периодические проверки эндпоинтов (демон или TUI)
-- **secret_scanner** — инструмент который мне дряется в git как хук и перед git push проверяет комит на наличие api ключей, если находит предотвращает push
-- **log_analyser** — «греп» по логам, показывает только изменения
-- **error_demux** — Rich TUI с топом дубликатов вывода по логам
-- **tg_alarm** — минимальная отправка сообщений в Telegram
-- **git_sync** — инструмент для синхронизации рабочей дириктории с удалённым репозиторием, может поднимать новую версию проекта
-- **timers** — набор таймеров для отсеживания времени работы функций, как синхронных так и асинхронных
-- **logger** — Rich логер с настраиваемым форматом ведения логов
 
-Rich* - позволяет работать с цветом, помогает не запутаться в куче серого текста)
+## Что внутри
 
----
+| Команда              | Краткое описание                                                                 | Основной режим       |
+|----------------------|----------------------------------------------------------------------------------|----------------------|
+| `health-checker`     | Периодическая проверка HTTP-эндпоинтов + алерты в Telegram + TUI со спарклайнами | демон / TUI          |
+| `secret-scanner`     | Поиск захардкоженных секретов (pre-push hook, CI, ручной запуск)                 | CLI + git hook + CI  |
+| `log-analyser`       | Следит за лог-файлом и отправляет совпадения по regexp в Telegram                | tail + grep + TG     |
+| `error-demux`        | Топ повторяющихся строк/ошибок в логах (разовый отчёт или watch-режим)          | анализ логов         |
+| `tg-alarm`           | Быстрая отправка сообщения в Telegram из терминала или кода                     | одноразовая отправка |
+| `git-sync`           | Автоматическая синхронизация репозитория + выполнение команд деплоя             | демон                |
+| `timers`             | Таймеры и декораторы для замера времени выполнения функций (sync/async)         | библиотека           |
+| `logger`             | Удобный Rich-логгер с кастомным форматом и цветами                              | библиотека           |
 
-## Быстрый старт
+Rich-вывод используется почти везде, где есть человекочитаемый интерфейс.
+
+## Установка
 
 ```bash
+# Самый простой способ
 pip install git+https://github.com/T1nnLD/dev-tools.git
+
+# Рекомендуемый способ в 2025–2026 (быстрее, чище, меньше мусора)
+uv pip install git+https://github.com/T1nnLD/dev-tools.git
 ```
 
----
+После установки команды будут доступны сразу в терминале.
 
-## Инструменты
+## Быстрый старт — самые популярные сценарии
 
-### 1) health_checker (`heath_checher.py`)
+```bash
+# Защита от утечки секретов перед push
+secret-scanner --since origin/main
 
-Периодически проверяет URL’ы, в случае исключения шлёт алерт в Telegram. Есть TUI с «спарклайнами» задержек.
+# Мониторинг здоровья сервисов с красивым TUI
+health-checker -c health.yaml -w
 
-**Конфиг (`-c`):**
+# Следить за ошибками в логе → алерты в Telegram
+log-analyser /var/log/app.log "ERROR|Exception|CRITICAL" 123456789 -i 2
+
+# Топ частых ошибок в логах (с автообновлением)
+error-demux app.log nginx.error.log -n 10 --watch
+```
+
+## Подробное описание инструментов
+
+### 1. health-checker
+
+Проверяет HTTP-эндпоинты с заданным интервалом. При ошибке — алерт в Telegram.  
+Есть режим TUI с графиками задержек (sparklines).
+
+```bash
+health-checker -c config.yaml
+health-checker -c config.yaml -i 5 -w
+```
+
+**Флаги:**
+- `-c, --config PATH`     (обязательно) путь к yaml
+- `-i, --interval SEC`    интервал проверок (по умолчанию: 10)
+- `-w, --watch`           запустить TUI
+
+Пример `config.yaml`:
 ```yaml
-tg_id: 123456789
+tg_id: 987654321
 points:
   - url: https://api.example.com/health
     method: GET
-  - url: https://api.example.com/ping
+    timeout: 5
+  - url: https://example.com/ping
     method: POST
-    data: '{"hello":"world"}'
+    json: {"status": "check"}
+    timeout: 3
 ```
 
-**Запуск (точные флаги):**
+**Планируется:**
+- проверки tcp/port
+- проверки баз данных
+- генератор конфига для FastAPI
+
+### 2. secret-scanner
+
+Сканер секретов (AWS, GCP, GitHub token, приватные ключи, высокая энтропия и др.).
+
 ```bash
-python heath_checher.py -c hc.yaml
-python heath_checher.py -c hc.yaml -i 5
-python heath_checher.py -c hc.yaml -w
-```
-Флаги:
-- `-c <PATH>` — **обязателен**, путь к YAML-конфигу
-- `-i <INT>` — интервал проверок в секундах (**по умолчанию: 10**)
-- `-w` — режим наблюдения (TUI)
-
-**TODO**
-- полная совместимость с запросами к базам данных
-- раздельные интервалы для эндпоинтов
-- сделать генератор конфига  health_checker для проектов на fastapi
-
-**Демо в состоянии просмотра**
-
-![python heath_checher.py -c hc.yaml -w](assets/health_checker.png)
-
----
-### 2) secret_scanner ()
-Сканирует репозиторий или изменённые файлы на «захардкоженные» секреты. Использует набор регэкспов по провайдерам + энтропию и поддерживает baseline для подавления известных находок.
-
-**Зачем:** поймать ключи/токены до попадания в `main` или артефакты сборки.
-
-**Возможности:**
-- Регэкспы + энтропия (AWS, GitHub, Slack, GCP, Stripe, приватные ключи, общие шаблоны).
-- Работа по папкам/файлам, только по git‑tracked или только по `git diff` через `--since`.
-- Точечный игнор строки: комментарий `# secret-scan: ignore`.
-- Baseline‑файл для подавления «известных» находок.
-- JSON для CI; завершение **кодом 1**, если есть новые находки.
-
-**Запуск**
-```bash
-secret_scanner --since <branch>
+secret-scanner
+secret-scanner --since origin/main
+secret-scanner --update-baseline
+secret-scanner --json > report.json
 ```
 
-можно настроить git хук перед push, тогда будет автоматически вызываться перед push
+**Основные флаги:**
+- `--since <ref>`          только изменения относительно ветки/коммита
+- `--git-tracked`          только отслеживаемые git файлы
+- `--baseline PATH`        файл исключений (.secret-scanner-baseline.json по умолчанию)
+- `--update-baseline`      обновить baseline и выйти с кодом 0
+- `--no-entropy`           отключить энтропийную проверку
+- `--json`                 вывод в JSON (для CI)
 
-.git/hooks/pre-push
+**Пример pre-push хука** (.git/hooks/pre-push):
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 
-secret_scaner.py --since origin/$current_branch
+secret-scaner.py --since origin/$current_branch
 ```
 
-если получили ложное срабатывание или нужно что-то оставить в захардкоженым то можно сгенерировать baseline
+### 3. log-analyser
+
+Следит за лог-файлом и отправляет совпадения по регулярке в Telegram.
+
 ```bash
-secret_scaner --update-baseline
+log-analyser /var/log/nginx/error.log "5[0-9]{2}" 123456789 -i 3
+log-analyser app.log "(ERROR|CRITICAL|Exception)" 987654321
 ```
 
-есть возможность вывод в json для CI
+Аргументы (позиционные):
+1. путь к файлу
+2. регулярное выражение (без учёта регистра)
+3. Telegram chat ID
+
+Флаги:
+- `-i, --interval SEC`     интервал проверки (по умолчанию 1)
+
+### 4. error-demux
+
+Топ повторяющихся строк в логах. Поддерживает watch-режим.
+
 ```bash
-python secret_scanner.py --since origin/main --json
-```
-
-**Опции:**
-- `paths...` — файлы или директории для сканирования (по умолчанию: `.`)
-- `--since <GIT_REF>` — только изменения относительно `GIT_REF..HEAD`
-- `--git-tracked` — сканировать только файлы, отслеживаемые git
-- `--baseline <PATH>` — путь к baseline (**по умолчанию: `.secret-scanner-baseline.json`**)
-- `--update-baseline` — записать текущие находки в baseline и выйти с кодом 0
-- `--json` — вывести JSON
-- `--no-entropy` — отключить энтропийные эвристики
-- `--ignore <GLOB>` — добавить шаблон игнора (флаг можно повторять)
-
-
-**GitHub Actions (CI):**
-```yaml
-name: secret-scan
-on: [pull_request]
-jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python3 secret_scanner.py --since origin/${{ github.base_ref }} --json
-```
-
-**Коды выхода:**
-- `0` — нет новых находок (или был использован `--update-baseline`)
-- `1` — обнаружены новые потенциальные секреты
-
----
-
-### 3) log_analyser (`log_analyser.py`)
-
-Следит за лог-файлом, выбирает строки по **регэкспу** (без учёта регистра) и отправляет найденные строки в Telegram.
-
-**Запуск (точные аргументы):**
-```bash
-python log_analyser.py /var/log/app.log "ERROR|Exception|CRITICAL" 123456789
-python log_analyser.py ./nginx.error.log "5[0-9]{2}" 123456789 -i 2
-```
-Позиционные аргументы:
-- `file` — путь к логу
-- `mode` — расширенный регэксп (через `|` для OR)
-- `tgid` — Telegram chat ID
-
-Необязательный флаг:
-- `-i <INT>` — интервал сканирования, сек (**по умолчанию: 1**)
-
-**Отправляется:** исходная строка с припиской `this stroke get from <path> log file`.
-
----
-
-### 4) error_demux (`error_demux.py`)
-
-Показывает топ повторяющихся строк по каждому файлу. Есть разовый отчёт и `--watch` с автообновлением. Выход — клавиша `Q`.
-
-**Разовый отчёт:**
-```bash
-python error_demux.py app.log nginx.error.log -n 15
-python error_demux.py app.log --ignore-case
-python error_demux.py app.log --no-strip
-```
-
-**Наблюдение:**
-```bash
-python error_demux.py app.log other.log --watch --refresh 0.5 --fullscreen
-```
-
-Флаги и аргументы (точно):
-- `files...` — один или несколько файлов (позиционные)
-- `--top, -n <INT>` — топ N строк для каждого файла (**по умолчанию: 10**)
-- `--ignore-case, -i` — без учёта регистра
-- `--no-strip` — не обрезать пробелы по краям
-- `--watch, -w` — режим наблюдения
-- `--refresh <FLOAT>` — интервал обновления в секундах (**по умолчанию: 1.0**)
-- `--fullscreen, -f` — полноэкранный режим
-
-**TODO:**
-- показ времени
-- реализация конвеера
-
-**Demo in watch state**
-![python heath_checher.py -c hc.yaml -w](assets/error_demux.png)
-
----
-
-### 4) tg_alarm (`tg_alarm.py`)
-
-Отправляет сообщение в указанный чат.
-
-**Запуск (точно):**
-```bash
-python tg_alarm.py <chat_id> "<message>"
-# пример
-python tg_alarm.py 123456789 "Проблема с сервисом X: timeout"
-```
----
-
-### 5) timers (`timers.py`)
-
-Утилита для измерения времени выполнения функций. Включает в себя:
-- `InterTimer` — простой таймер с методами `start()` и `stop(name)`.
-- `timer_ms` — декоратор для измерения времени выполнения синхронных и асинхронных функций.
-
-**Пример использования:**
-```python
-from dev_tools import InterTimer, timer_ms
-
-# Использование InterTimer
-timer = InterTimer()
-timer.start()
-# ... код ...
-timer.stop("initialization")
-
-# Использование timer_ms
-@timer_ms("calc")
-def calc():
-    # ... код ...
-    pass
-
-@timer_ms(fmt="Function {label} took {time:.2f} ms")
-async def task():
-    # ... код ...
-    pass
-```
-
----
-### 6) logger (`logger.py`)
-
-Rich логгер с настраиваемым форматом ведения логов. Позволяет использовать цвета и различные форматы для лучшей читаемости.
-
-**Пример использования:**
-```python
-from dev_tools import log
-
-# Логирование с цветом
-log("Это сообщение будет желтым", "yellow")
-log("Это сообщение будет красным", "red")
-
-# Изменение формата логов
-from dev_tools import set_log_format
-set_log_format("[bold {color}]{date} - {time}[/] => {text}")
-```
-
----
-
-### 7) git_sync (`git_sync.py`)
-
-Инструмент для синхронизации рабочей директории с удалённым репозиторием. Может поднимать новую версию проекта. Поддерживает игнорирование файлов и выполнение команд деплоя после синхронизации.
-
-**Конфиг (`-c`):**
-```yaml
-config:
-  branch: main
-  interval: 1
-  ignore:
-    - 'git-sync.conf.yaml'
-    - 'secrets/**'
-  deploy:
-    - 'sudo systemctl restart myapp'
-    - 'echo "Deploy finished"'
-```
-
-**Запуск:**
-```bash
-python git_sync.py -c git-sync.conf.yaml
-python git_sync.py --generate-config
+error-demux app.log nginx.error.log -n 15 --watch --refresh 2
+error-demux error.log --ignore-case
 ```
 
 Флаги:
-- `-c <PATH>` — путь к YAML-конфигу (**по умолчанию: `./git-sync.conf.yaml`**)
-- `--generate-config` — генерирует baseline конфигурационного файла
+- `-n, --top N`            размер топа (по умолчанию 10)
+- `--watch, -w`            режим наблюдения
+- `--refresh SEC`          частота обновления (по умолчанию 1.0)
+- `--ignore-case, -i`
+- `--no-strip`             не убирать пробелы по краям
 
-**Опции конфига:**
-- `branch` — имя ветки для синхронизации (**обязательно**)
-- `interval` — интервал проверки изменений в секундах (**по умолчанию: 1**)
-- `ignore` — список паттернов файлов/путей для игнорирования
-- `deploy` — список команд для выполнения после синхронизации
+Выход из watch — клавиша `q`.
 
-**Особенности:**
-- Проверяет наличие изменений с удалённым репозиторием
-- Автоматически синхронизирует локальную ветку с удалённой
-- Может игнорировать определённые файлы/каталоги
-- Поддерживает выполнение команд деплоя после успешной синхронизации
-- Может генерировать файл sudoers для выполнения команд деплоя без пароля
+### 5. tg-alarm
 
----
+Отправка сообщения в Telegram.
 
-## Как связать
-
-- `health_checker` — шлёт оповещение при исключении запроса.
-- `log_analyser` — отправляет найденные по регэкспу строки.
-- `error_demux` — локальный просмотрщик/агрегатор (без Telegram).
-
-Минимальный живой сценарий с алертами только на совпадения:
 ```bash
-python log_analyser.py /var/log/app.log "ERROR|Exception" 123456789 -i 1
+tg-alarm 123456789 "Деплой завершён успешно"
+tg-alarm 987654321 "Сервис упал" --silent
 ```
 
+### 6. git-sync
+
+Автосинхронизация репозитория + выполнение команд после pull.
+
+```bash
+git-sync -c git-sync.yaml
+git-sync --generate-config
+```
+
+Пример конфига `git-sync.yaml`:
+```yaml
+branch: main
+interval: 30
+ignore:
+  - secrets/**
+  - .env
+deploy:
+  - sudo systemctl restart myapp
+  - echo "Deploy done"
+```
+
+### 7. timers (библиотека)
+
+```python
+from dev_tools.timers import timer_ms, InterTimer
+
+@timer_ms("important_calc")
+def heavy():
+    ...
+
+@timer_ms(fmt='{time} >>> [bold {color}]{label}[/]')
+async def some_func():
+    ...
+
+timer = InterTimer()
+timer.start()
+# код
+timer.stop("stage1")
+```
+
+### 8. logger (библиотека)
+
+```python
+from dev_tools.logger import log, set_log_format
+
+log("Успех!", "green")
+set_log_format("[bold cyan]{time}[/] {text}")
+```
+
+## TODO (ближайшие планы)
+
+- Единый интерфейс: `devtool <command> ...`
+- Автогенерация конфигов для health-checker
+- Интеграция с FastAPI (middleware + error handling)
+- Blue-green deploy в git-sync
+
+
 ---
-
-## TODO:
-
-- создать автогенерацию конфига для health_checker
-- создать надстройку для fastapi чтобы ослеживать запросы и ответы при ошибках
-- создать надстройку для fastapi для блокирования вывода некоторой информации в логи, например health запросы

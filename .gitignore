@@ -45,4 +45,5 @@ Thumbs.db
 
 # uv
 .uv_cache/
+hc.yaml
 
