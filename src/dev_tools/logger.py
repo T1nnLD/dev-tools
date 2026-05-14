@@ -1,9 +1,10 @@
 import time
+from typing import Any
 from rich import print as rprint
 
 LOG_FORMAT:str = "[bold {color}]{date} - {time}[/] => {text}"
 
-def log(text: str, color: str = "yellow", fmt: str | None = None):
+def log(text: Any, color: str = "yellow", fmt: str | None = None):
     if not fmt:
         fmt = LOG_FORMAT
     time_now = time.strftime("%H:%M:%S", time.localtime())
