@@ -3,7 +3,7 @@ import argparse
 import subprocess as sp
 from pydantic import BaseModel
 from pydantic import field_validator
-from .logger import log
+from dev_tools.logging import log
 from time import sleep
 from rich.console import Console
 from typing import List, Optional
@@ -126,11 +126,32 @@ def generate_sudoers_file(config: Config):
     except sp.CalledProcessError as e:
         log(f"[ERR] Failed to generate sudoers: {e}", "red")
 
+def deploy(config: Config, console: Console) -> None:
+    for raw_cmd in config.deploy:
+        cmd = raw_cmd.strip()
+        background = cmd.endswith("&")
+        cmd = cmd.rstrip("&").strip()   # убираем & из команды
+
+        with console.status(f"       [bold yellow]Running: {cmd} ...[/]", spinner="dots"):
+            if background:
+                # Запускаем в фоне и НЕ ждём
+                sp.Popen(cmd, shell=True)
+                console.print("       started in background", style="bold green")
+            else:
+                # Обычная команда — ждём завершения
+                deploy_result = sp.run(cmd, shell=True, capture_output=True, text=True)
+                if deploy_result.returncode != 0:
+                    console.print(f"       [bold red][ERR] Deploy command failed[/]: {deploy_result.stderr.strip()}")
+                else:
+                    console.print(f"       done (output: {deploy_result.stdout.strip()})", style="bold green")
+
+
 def main():
     try:
         parser = argparse.ArgumentParser()
         parser.add_argument("-c", type=str, default="./git-sync.conf.yaml", help="path to config")
         parser.add_argument("--generate-config", action="store_true", help="generate baseline config")
+        parser.add_argument("--launch-deploy", action="store_true", help="launch git-sync agent with deploy pipeline")
         args = parser.parse_args()
 
         if args.generate_config:
@@ -163,6 +184,9 @@ def main():
 
         console = Console()  # Глобальный console для очистки
 
+        if args.launch_deploy:
+            deploy(config, console)
+
         while True:
             #console.clear()  # Стираем предыдущие выводы перед новой проверкой
             if has_differences_with_remote(config.branch, config.ignore):
@@ -181,23 +205,7 @@ def main():
 
                         if config.deploy:
                             console.print("\n    [bold yellow]Deploying ...[/]")
-                            for raw_cmd in config.deploy:
-                                cmd = raw_cmd.strip()
-                                background = cmd.endswith("&")
-                                cmd = cmd.rstrip("&").strip()   # убираем & из команды
-
-                                with console.status(f"       [bold yellow]Running: {cmd} ...[/]", spinner="dots"):
-                                    if background:
-                                        # Запускаем в фоне и НЕ ждём
-                                        sp.Popen(cmd, shell=True)
-                                        console.print("       started in background", style="bold green")
-                                    else:
-                                        # Обычная команда — ждём завершения
-                                        deploy_result = sp.run(cmd, shell=True, capture_output=True, text=True)
-                                        if deploy_result.returncode != 0:
-                                            console.print(f"       [bold red][ERR] Deploy command failed[/]: {deploy_result.stderr.strip()}")
-                                        else:
-                                            console.print(f"       done (output: {deploy_result.stdout.strip()})", style="bold green")
+                            deploy(config, console)
             sleep(config.interval)
     except KeyboardInterrupt:
         log('exiting...')
@@ -205,3 +213,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
